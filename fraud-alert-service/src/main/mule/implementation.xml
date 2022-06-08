@@ -21,6 +21,7 @@ http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/cu
 			</scheduling-strategy>
 			<file:matcher filenamePattern="legacy.csv"/>
 		</file:listener>
+		<logger level="INFO" doc:name="Logger" doc:id="66df440c-3f21-4677-885f-72dde3228602" message="started"/>
 		<ee:transform doc:name="Transform Message" doc:id="7e18ca6f-e451-4fc5-bab2-a4d6defbe813" >
 			<ee:message >
 				<ee:set-payload ><![CDATA[%dw 2.0
