@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:db="http://www.mulesoft.org/schema/mule/db"
+	xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+	xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd 
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	    <http:listener-config name="fraud-alert-service-httpListenerConfig">
+        <http:listener-connection host="${http.host}" port="${http.port}" />
+    </http:listener-config>
+    <apikit:config name="fraud-alert-service-config" api="fraud-alert-service-2.1.1-raml/fraud-alert-service.raml" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="0d63c8c5-f4d6-41fe-b2db-023813cc271a" >
+		<db:my-sql-connection host="localhost" port="3306" user="root" password="root" />
+	</db:config>
+	<configuration-properties doc:name="Configuration properties" doc:id="bee169c8-cdeb-4efa-b2c2-d9023b136b72" file="dev.yaml" />
+	<configuration doc:name="Configuration" doc:id="8cac29fd-d2df-4d2d-9e14-2e0fc85d10eb" defaultErrorHandler-ref="global-error-handler" />
+	<error-handler name="global-error-handler" doc:id="a246595c-7fda-42a8-b272-3fdbfb141b3b" >
+		<on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="f37821b5-7d81-433d-86fd-3bd64e9cc243" >
+			<flow-ref doc:name="global-error-sub-flow" doc:id="7e00e6e1-e3de-49c4-aa3a-b36082897aec" name="global-error-sub-flow"/>
+		</on-error-propagate>
+	</error-handler>
+	<sub-flow name="global-error-sub-flow" doc:id="cd58e776-a0fd-434e-bbcc-974801ffc1af" >
+		<ee:transform doc:name="error-response-payload" doc:id="eb1b85ba-07c0-427b-972d-8707a255d041" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	message: "error occurred",
+	error: {
+		description: error.description,
+		errorType: error.errorType.asString
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</sub-flow>
+	
+	
+	
+</mule>
