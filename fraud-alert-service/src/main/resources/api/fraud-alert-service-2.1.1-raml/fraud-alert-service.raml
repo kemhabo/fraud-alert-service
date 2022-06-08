@@ -1,0 +1,41 @@
+#%RAML 1.0
+title: fraud-alert-service
+description: This is a fraud alert service api.
+version: 2.1.0
+/customer:                  
+  get:
+    responses:
+      200:
+        body:
+          application/json:
+            type: array
+            example:
+              [
+                {
+                  correlationID: 12,
+                  firstName: "Tobe",
+                  lastName: "Micha",
+                  companyName: "abc",
+                  primaryEmail: "tobe123@gmail.com",
+                  secondaryEmail: "N/A",
+                  phone: 2023155658
+                }
+              ]
+  /{id}:
+    get:
+      responses:
+        200:
+          body:
+            application/json:
+              type: object
+              example:
+                {
+                  correlationID: 12,
+                  firstName: "Tobe",
+                  lastName: "Micha",
+                  companyName: "abc",
+                  primaryEmail: "tobe123@gmail.com",
+                  secondaryEmail: "N/A",
+                  phone: 2023155658
+                }
+                                                                                                                                                                                           

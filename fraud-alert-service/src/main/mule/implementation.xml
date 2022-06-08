@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+	xmlns:file="http://www.mulesoft.org/schema/mule/file" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/file http://www.mulesoft.org/schema/mule/file/current/mule-file.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+	<http:request-config name="HTTP_Request_configuration" doc:name="HTTP Request configuration" doc:id="48dc9a48-5d93-4ec7-8601-dc5385cee16a" >
+		<http:request-connection host="localhost" port="8081" >
+			<reconnection >
+				<reconnect-forever />
+			</reconnection>
+		</http:request-connection>
+	</http:request-config>
+	<flow name="implementationFlow" doc:id="04d71366-a018-487b-bd97-0480815aedcb" >
+		<file:listener doc:name="On New or Updated File" doc:id="944b2c2c-6d62-4b80-9f87-23f1cf9842e8" directory="C:\T-Mule-Doccuments\csv-File\input" autoDelete="true" moveToDirectory="C:\T-Mule-Doccuments\csv-File\output">
+			<scheduling-strategy >
+				<fixed-frequency />
+			</scheduling-strategy>
+			<file:matcher filenamePattern="legacy.csv"/>
+		</file:listener>
+		<ee:transform doc:name="Transform Message" doc:id="7e18ca6f-e451-4fc5-bab2-a4d6defbe813" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="inputCsv" ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<ee:transform doc:name="Transform Message" doc:id="40f81cc7-d786-43eb-bd75-7391e238da0b" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ((balance, index) -> {
+    id: balance.id,
+    phone_number: balance.phone_number,
+    first_name: balance.first_name,
+    last_name: balance.last_name,
+    email: balance.email
+}
+)]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="inVar" ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ((balance, index) -> {
+    id: balance.id,
+    phone_number: balance.phone_number,
+    first_name: balance.first_name,
+    last_name: balance.last_name,
+    email: balance.email
+}
+)]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<foreach doc:name="For Each" doc:id="848a4759-67a1-436b-9c69-dee83d4d5955" >
+			<set-variable value="#[payload]" doc:name="Set Variable" doc:id="f6cd6d96-d770-42da-8f5f-2c18ac8226b5" variableName="trueVar"/>
+			<http:request method="GET" doc:name="Request" doc:id="1ef2f670-8571-447c-b1db-f1d68477bd4d" url="http://apilayer.net/api/validate">
+				<http:query-params ><![CDATA[#[output application/java
+---
+{
+	"access_key" : "6f76d3da1bad06d93f632fbbe91d81fc",
+	"number" : payload.phone_number
+}]]]></http:query-params>
+			</http:request>
+			<choice doc:name="Choice" doc:id="bc45a596-5407-4fb6-9998-c0fd2ace175d" >
+				<when expression="#[payload.valid == true]">
+					<ee:transform doc:name="Transform Message" doc:id="a36c198c-125b-4af6-a0f3-9948cdb214ce" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.trueVar]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<db:select doc:name="Select" doc:id="29635ba8-8c15-4017-9f0d-ad7700e2cc06" config-ref="Database_Config">
+						<db:sql><![CDATA[select * from legacy.customer where firstName=:firstName and lastName=:lastName;]]></db:sql>
+						<db:input-parameters><![CDATA[#[{
+	firstName: payload.first_name,
+	lastName: payload.last_name,
+}]]]></db:input-parameters>
+					</db:select>
+					<choice doc:name="Choice" doc:id="7bb2a34f-c941-4e24-89c4-d89964ec3924" >
+						<when expression="#[payload != []]">
+							<ee:transform doc:name="Transform Message" doc:id="22ca93df-8a99-4e61-a707-570f83fd238a" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload map ((b, index) -> {
+    correlationID: vars.trueVar.id,
+    firstName: b.firstName,
+    lastName: b.lastName,
+    companyName: b.company,
+    primaryEmail: b.email,
+    phone: vars.trueVar.phone_number
+}
+)]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+							<db:insert doc:name="Insert" doc:id="f63a6a70-12d7-4694-99b3-f805a2bdb443" config-ref="Database_Config">
+								<db:sql ><![CDATA[insert into modern.customer (correlationID, firstName, lastName, companyName, primaryEmail, secondaryEmail, phone)
+values (:correlationID, :firstName, :lastName, :companyName, :primaryEmail, :secondaryEmail, :phone );]]></db:sql>
+								<db:input-parameters ><![CDATA[#[{
+	correlationID: payload.correlationID[0],
+	firstName: payload.firstName[0],
+	lastName: payload.lastName[0],
+	companyName: payload.companyName[0],
+	primaryEmail: payload.primaryEmail[0],
+	secondaryEmail: payload.secondaryEmail[0] default "N/A",
+	phone: payload.phone[0]
+}]]]></db:input-parameters>
+							</db:insert>
+						</when>
+						<otherwise >
+							<ee:transform doc:name="Transform Message" doc:id="f6b41c81-af9b-4c5b-b98d-2ea06da66f25" >
+								<ee:message >
+									<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+"Your information is incorrect. Please make a correction"]]></ee:set-payload>
+								</ee:message>
+							</ee:transform>
+						</otherwise>
+					</choice>
+				</when>
+				<otherwise >
+					<ee:transform doc:name="Transform Message" doc:id="8fd9ce59-a844-4867-8caf-0b88c36eb6f8" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+vars.trueVar]]></ee:set-payload>
+						</ee:message>
+					</ee:transform>
+					<logger level="INFO" doc:name="Logger" doc:id="dce02e6a-dc36-4c60-8953-89e746bae1d3" message="#[payload]"/>
+				</otherwise>
+			</choice>
+		</foreach>
+		<logger level="INFO" doc:name="flowEndedLogger" doc:id="36ce18c4-3b22-4d91-967b-cb3cad336294" />
+	</flow>
+</mule>
